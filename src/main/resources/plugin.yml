@@ -1,0 +1,10 @@
+name: Man10TravelKeeper
+version: '${version}'
+author: Match_bou
+main: github.io.jpbtk.man10travelkeeper.Man10TravelKeeper
+api-version: '1.20'
+commands:
+  man10travelkeeper:
+    description: メインコマンドです
+    aliases: [mtk , mtravel]
+    permission: man10travelkeeper.use

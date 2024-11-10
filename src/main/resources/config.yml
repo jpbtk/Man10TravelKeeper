@@ -1,0 +1,8 @@
+prefix: "§f§l[§d§lMan10§f§lTravel§a§lKeeper§f§l]§r "
+message:
+  op-join: "§a§lOP権限をバイパスしてワールドに入りました"
+  no-permission: "§4§lワールドに入る権限がありません"
+  no-spawn: "§4§lスポーン地点が設定されていません"
+  out-of-time: "§4§l現在はワールドに入場できない時間帯です"
+  # reached-limit: "§4§lワールドに入場できる回数の上限に達しました"
+  reached-time-limit: "§4§lワールドに入場できる時間の上限に達しました"
