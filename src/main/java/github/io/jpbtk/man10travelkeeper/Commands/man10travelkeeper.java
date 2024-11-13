@@ -286,6 +286,69 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                             }
                         }
                     }
+                    if (args[4].equalsIgnoreCase("actions") && args.length >= 6) {
+                        if (args[5].equalsIgnoreCase("add") && args.length >= 7) {
+                            if (args.length == 7) {
+                                sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper settings edit <settingname> actions add <command|message|warp> <名前>");
+                                return true;
+                            }
+                            List<String> actions = new ArrayList<>();
+                            if (yaml.getConfigurationSection("settings." + args[3] + ".actions") != null) {
+                                actions = yaml.getConfigurationSection("settings." + args[3] + ".actions").getKeys(false).stream().toList();
+                            }
+                            if (actions.contains(args[6])) {
+                                sender.sendMessage(prefix + "§c§l指定されたアクションはすでに存在します。");
+                                return true;
+                            }
+                            yaml.set("settings." + args[3] + ".actions." + args[7] + ".type", args[6]);
+                            yaml.set("settings." + args[3] + ".actions." + args[7] + ".content", "");
+                            try {
+                                yaml.save(file);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            sender.sendMessage(prefix + "§a§lアクションを追加しました。");
+                        }
+                        if (args[5].equalsIgnoreCase("delete") && args.length == 7) {
+                            List<String> actions = yaml.getConfigurationSection("settings." + args[3] + ".actions").getKeys(false).stream().toList();
+                            if (actions == null) {
+                                sender.sendMessage(prefix + "§c§lアクションが存在しません。");
+                                return true;
+                            }
+                            if (actions.contains(args[6])) {
+                                yaml.set("settings." + args[3] + ".actions." + args[6], null);
+                                try {
+                                    yaml.save(file);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                sender.sendMessage(prefix + "§a§lアクションを削除しました。");
+                            } else {
+                                sender.sendMessage(prefix + "§c§l指定されたアクションは存在しません。");
+                            }
+                        }
+                        if (args[5].equalsIgnoreCase("list")) {
+                            List<String> actions = yaml.getConfigurationSection("settings." + args[3] + ".actions").getKeys(false).stream().toList();
+                            if (actions == null) {
+                                sender.sendMessage(prefix + "§c§lアクションが存在しません。");
+                                return true;
+                            }
+                            sender.sendMessage(prefix + "§a§lアクション一覧:");
+                            for (String action : actions) {
+                                sender.sendMessage("§8- §7" + action);
+                            }
+                        }
+                    }
+                    if (args[4].equalsIgnoreCase("limit") && args.length == 7) {
+                        yaml.set("settings." + args[3] + ".limit", Integer.parseInt(args[5]));
+                        yaml.set("settings." + args[3] + ".cooldown", Integer.parseInt(args[6]));
+                        try {
+                            yaml.save(file);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        sender.sendMessage(prefix + "§a§l設定を変更しました。");
+                    }
                 }
                 if (args[2].equalsIgnoreCase("list")) {
                     List<String> settings = yaml.getConfigurationSection("settings").getKeys(false).stream().toList();
@@ -389,12 +452,13 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
             }
             if (args.length == 5) {
                 tab.add("conditions");
+                tab.add("actions");
                 tab.add("time");
-                //tab.add("limit");
+                tab.add("limit");
                 tab.add("enable");
             }
             if (args.length == 6) {
-                if (args[4].equalsIgnoreCase("conditions")) {
+                if (args[4].equalsIgnoreCase("conditions") || args[4].equalsIgnoreCase("actions")) {
                     tab.add("add");
                     tab.add("delete");
                     tab.add("list");
@@ -403,12 +467,15 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                     tab.add("<滞在可能時間(秒)>");
                 }
                 if (args[4].equalsIgnoreCase("limit")) {
-                    //tab.add("<入場可能回数>");
+                    tab.add("<入場可能回数>");
                 }
                 if (args[4].equalsIgnoreCase("enable")) {
                     tab.add("true");
                     tab.add("false");
                 }
+            }
+            if (args.length == 7 && args[4].equalsIgnoreCase("limit")) {
+                tab.add("<クールダウン時間(日)>");
             }
             if (args.length == 7 && args[4].equalsIgnoreCase("conditions") && args[5].equalsIgnoreCase("add")) {
                 tab.add("date");
@@ -420,6 +487,17 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 List<String> conditions = (List<String>) YamlConfiguration.loadConfiguration(file).getList("settings." + args[3] + ".conditions");
                 for (String condition : conditions) {
                     tab.add(condition);
+                }
+            }
+            if (args.length == 7 && args[4].equalsIgnoreCase("actions") && args[5].equalsIgnoreCase("add")) {
+                tab.add("command");
+                tab.add("message");
+                tab.add("warp");
+            }
+            if (args.length == 7 && args[4].equalsIgnoreCase("actions") && args[5].equalsIgnoreCase("delete")) {
+                List<String> actions = YamlConfiguration.loadConfiguration(file).getConfigurationSection("settings." + args[3] + ".actions").getKeys(false).stream().toList();
+                for (String action : actions) {
+                    tab.add(action);
                 }
             }
             if (args.length == 8 && args[4].equalsIgnoreCase("conditions") && args[5].equalsIgnoreCase("add")) {

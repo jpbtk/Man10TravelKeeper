@@ -39,6 +39,7 @@ public class Listeners implements Listener {
         Date nowdate = new Date(System.currentTimeMillis());
         Boolean isCanEnter = true;
         Integer canEnterTime = 0;
+        Date wholeendtime = null;
         for (String setting : settings) {
             if (yaml.getBoolean("settings." + setting + ".enable")) {
                 List<String> conditions = (List<String>) yaml.getList("settings." + setting + ".conditions");
@@ -65,15 +66,15 @@ public class Listeners implements Listener {
                             }
                             if (!date.contains(nowdate.getDate()) && conditionType.equals("date")) {
                                 isCanEnter = false;
-                                break;
+                                continue;
                             }
                             if (!date.contains(nowdate.getMonth() + 1) && conditionType.equals("month")) {
                                 isCanEnter = false;
-                                break;
+                                continue;
                             }
                             if (!date.contains(nowdate.getDay()) && conditionType.equals("a-day-of-week")) {
                                 isCanEnter = false;
-                                break;
+                                continue;
                             }
                         }
                         if (conditionType.equals("duringtime")) {
@@ -86,10 +87,30 @@ public class Listeners implements Listener {
                             endtime.setHours(Integer.parseInt(time.split("-")[1].split(":")[0]));
                             endtime.setMinutes(Integer.parseInt(time.split("-")[1].split(":")[1]));
                             endtime.setSeconds(0);
+                            wholeendtime = endtime;
                             if (!(starttime.before(nowdate) && endtime.after(nowdate))) {
                                 isCanEnter = false;
-                                break;
+                                continue;
                             }
+                        }
+                        if (isCanEnter) {
+                            List<String> actions = yaml.getConfigurationSection("settings." + setting + ".actions").getKeys(false).stream().toList();
+                            for (String action : actions) {
+                                String actionType = yaml.getString("settings." + setting + ".actions." + action + ".type");
+                                if (yaml.get("settings." + setting + ".actions." + action + ".content") != null) {
+                                    if (actionType.equals("warp")) {
+                                        Location loc = yaml.getLocation("settings." + setting + ".actions." + action + ".content");
+                                        player.teleport(loc);
+                                    }
+                                    if (actionType.equals("message")) {
+                                        player.sendMessage(prefix + yaml.getString("settings." + setting + ".actions." + action + ".content"));
+                                    }
+                                    if (actionType.equals("command")) {
+                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), yaml.getString("settings." + setting + ".actions." + action + ".content").replace("%player%", player.getName()));
+                                    }
+                                }
+                            }
+                            break;
                         }
                     }
                     canEnterTime = yaml.getInt("settings." + setting + ".time");
@@ -140,6 +161,12 @@ public class Listeners implements Listener {
                 }
             }
             canEnterTime = (int) (canEnterTime - (nowdate.getTime() - lastdate.getTime()) / 1000);
+        }
+        if (wholeendtime != null) {
+            Date endtime = wholeendtime;
+            if (endtime.getTime() - nowdate.getTime() < canEnterTime * 1000) {
+                canEnterTime = Math.toIntExact((int) canEnterTime - ((endtime.getTime() - nowdate.getTime()) / 1000));
+            }
         }
         // 指定秒後にテレポートさせるスレッド処理
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
