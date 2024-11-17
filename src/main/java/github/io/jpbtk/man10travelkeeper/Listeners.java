@@ -27,6 +27,9 @@ public class Listeners implements Listener {
         if (!file.exists()) {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
             yaml.set("enable", true);
+            if (player.isOp()) {
+                yaml.set("op-mode", true);
+            }
             try {
                 yaml.save(file);
             } catch (Exception e) {
@@ -40,7 +43,9 @@ public class Listeners implements Listener {
         UUID world = player.getWorld().getUID();
         File file = new File(plugin.getDataFolder(), "worlds/" + player.getWorld().getUID() + ".yml");
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-        if (player.isOp()) {
+        File playerfile = new File(plugin.getDataFolder(), "playerdata/" + player.getUniqueId() + ".yml");
+        YamlConfiguration playeryaml = YamlConfiguration.loadConfiguration(playerfile);
+        if (player.isOp() && file.exists() && yaml.getBoolean("op-mode")) {
             player.sendMessage(prefix + plugin.getConfig().getString("message.op-join"));
             return;
         }
@@ -61,7 +66,9 @@ public class Listeners implements Listener {
             if (yaml.getBoolean("settings." + setting + ".enable")) {
                 List<String> conditions = (List<String>) yaml.getList("settings." + setting + ".conditions");
                 if (!(conditions.isEmpty())) {
+                    int j = 0;
                     for (String condition : conditions) {
+                        j++;
                         isCanEnter = true;
                         String conditionType = condition.split(":")[0];
                         if (conditionType.equals("date") || conditionType.equals("month") || conditionType.equals("a-day-of-week")) {
@@ -97,6 +104,7 @@ public class Listeners implements Listener {
                         }
                         if (conditionType.equals("duringtime")) {
                             String time = condition.replace("duringtime:", "");
+                            player.sendMessage(time);
                             Date starttime = new Date(System.currentTimeMillis());
                             starttime.setHours(Integer.parseInt(time.split("-")[0].split(":")[0]));
                             starttime.setMinutes(Integer.parseInt(time.split("-")[0].split(":")[1]));
@@ -111,9 +119,7 @@ public class Listeners implements Listener {
                                 break;
                             }
                         }
-                        if (isCanEnter) {
-                            File playerfile = new File(plugin.getDataFolder(), "playerdata/" + player.getUniqueId() + ".yml");
-                            YamlConfiguration playeryaml = YamlConfiguration.loadConfiguration(playerfile);
+                        if (isCanEnter && j == conditions.size()) {
                             int joinlimit = yaml.getInt("settings." + setting + ".limit");
                             int joincooldown = yaml.getInt("settings." + setting + ".cooldown");
                             if (joinlimit != 0) {

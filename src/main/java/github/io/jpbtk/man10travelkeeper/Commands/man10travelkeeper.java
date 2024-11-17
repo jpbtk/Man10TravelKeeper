@@ -422,6 +422,17 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                         return true;
                     }
                     if (args.length == 5) {
+                        if (args[3].equalsIgnoreCase("op-mode")) {
+                            Boolean enable = Boolean.parseBoolean(args[4]);
+                            yaml.set("op-mode", enable);
+                            try {
+                                yaml.save(file);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            sender.sendMessage(prefix + "§a§lOPモードを" + (enable ? "§a§l有効" : "§c§l無効") + "にしました。");
+                            return true;
+                        }
                         sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> edit <worldname> <settingname> <join|lastjoin>");
                         return true;
                     }
@@ -490,7 +501,7 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                     tab.add(world.getName());
                 }
             }
-            if (args[0].equalsIgnoreCase("delworld") || args[0].equalsIgnoreCase("setsapwn") || args[0].equalsIgnoreCase("state") || args[0].equalsIgnoreCase("settings")) {
+            if (args[0].equalsIgnoreCase("delworld") || args[0].equalsIgnoreCase("setspawn") || args[0].equalsIgnoreCase("state") || args[0].equalsIgnoreCase("settings")) {
                 File[] files = new File(plugin.getDataFolder(), "worlds").listFiles();
                 for (File file : files) {
                     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
@@ -560,6 +571,7 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 }
                 YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
                 if (args[2].equalsIgnoreCase("edit")) {
+                    tab.add("op-mode");
                     List<String> settings = yaml.getConfigurationSection("").getKeys(false).stream().toList();
                     if (settings.size() != 0) {
                         for (String setting : settings) {
@@ -577,6 +589,10 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
             File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
             if (!file.exists()) {
                 return tab;
+            }
+            if (args[4].equalsIgnoreCase("op-mode")) {
+                tab.add("true");
+                tab.add("false");
             }
             String worlduuid = Bukkit.getWorld(args[3]).getUID().toString();
             List<String> settings = YamlConfiguration.loadConfiguration(file).getConfigurationSection(worlduuid).getKeys(false).stream().toList();
