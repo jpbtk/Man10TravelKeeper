@@ -2,6 +2,7 @@ package github.io.jpbtk.man10travelkeeper.Commands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -338,6 +339,39 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                                 sender.sendMessage("§8- §7" + action);
                             }
                         }
+                        if (args[5].equalsIgnoreCase("content") && args.length >= 7) {
+                            String type = yaml.getString("settings." + args[3] + ".actions." + args[6] + ".type");
+                            if (args[7].equalsIgnoreCase("reset")) {
+                                yaml.set("settings." + args[3] + ".actions." + args[6] + ".content", null);
+                                try {
+                                    yaml.save(file);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                sender.sendMessage(prefix + "§a§lコンテンツをリセットしました。");
+                                return true;
+                            } else {
+                                if (args[7].equalsIgnoreCase("here")) {
+                                    Location loc = player.getLocation();
+                                    yaml.set("settings." + args[3] + ".actions." + args[6] + ".content", loc);
+                                    try {
+                                        yaml.save(file);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    sender.sendMessage(prefix + "§a§lコンテンツを追加しました。");
+                                    return true;
+                                }
+                                yaml.set("settings." + args[3] + ".actions." + args[6] + ".content", args[7]);
+                                try {
+                                    yaml.save(file);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                sender.sendMessage(prefix + "§a§lコンテンツを追加しました。");
+                                return true;
+                            }
+                        }
                     }
                     if (args[4].equalsIgnoreCase("limit") && args.length == 7) {
                         yaml.set("settings." + args[3] + ".limit", Integer.parseInt(args[5]));
@@ -367,6 +401,66 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 plugin.reloadConfig();
                 sender.sendMessage(prefix + "§a§lコンフィグをリロードしました。");
             }
+            if (args[0].equalsIgnoreCase("playerdata") && args.length >= 1) {
+                if (args.length == 1) {
+                    sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> <edit>");
+                    return true;
+                }
+                File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
+                if (!file.exists()) {
+                    sender.sendMessage(prefix + "§c§l指定されたプレイヤーは登録されていません。");
+                    return true;
+                }
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+                if (args[2].equalsIgnoreCase("edit") && args.length >= 3) {
+                    if (args.length == 3) {
+                        sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> edit <worldname>");
+                        return true;
+                    }
+                    if (args.length == 4) {
+                        sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> edit <worldname> <settingname>");
+                        return true;
+                    }
+                    if (args.length == 5) {
+                        sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> edit <worldname> <settingname> <join|lastjoin>");
+                        return true;
+                    }
+                    if (args[5].equalsIgnoreCase("reset")) {
+                        yaml.set(Bukkit.getWorld(args[3]).getUID() + "." + args[4], null);
+                        try {
+                            yaml.save(file);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        sender.sendMessage(prefix + "§a§l" + args[1] + "の" + args[3] + "の" + args[4] + "をリセットしました。");
+                        return true;
+                    }
+                    if (args.length == 6) {
+                        sender.sendMessage(prefix + "§c§l使い方: /man10travelkeeper playerdata <playername> edit <worldname> <settingname> <join|lastjoin> <value>");
+                        return true;
+                    }
+                    if (args[5].equalsIgnoreCase("join")) {
+                        yaml.set(Bukkit.getWorld(args[3]).getUID() + "." + args[4] + ".join", Integer.parseInt(args[6]));
+                        try {
+                            yaml.save(file);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        sender.sendMessage(prefix + "§a§l" + args[1] + "の" + args[3] + "の" + args[4] + "を変更しました。");
+                        return true;
+                    }
+                    if (args[5].equalsIgnoreCase("lastjoin")) {
+                        yaml.set(Bukkit.getWorld(args[3]).getUID() + "." + args[4] + ".lastjoin", Long.parseLong(args[6]));
+                        try {
+                            yaml.save(file);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        sender.sendMessage(prefix + "§a§l" + args[1] + "の" + args[3] + "の" + args[4] + "を変更しました。");
+                        return true;
+                    }
+                }
+            }
         }
         return true;
     }
@@ -386,6 +480,7 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
             tab.add("list");
             tab.add("state");
             tab.add("settings");
+            tab.add("playerdata");
             tab.add("reload");
         }
         if (args.length == 2) {
@@ -402,6 +497,16 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                     tab.add(yaml.getString("worldname"));
                 }
             }
+            if (args[0].equalsIgnoreCase("playerdata")) {
+                File[] files = new File(plugin.getDataFolder(), "playerdata").listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(file.getName().replace(".yml", "")));
+                        tab.add(offlinePlayer.getName());
+                    }
+                }
+            }
+            return tab;
         }
         if (args.length == 3) {
             if (args[0].equalsIgnoreCase("state")) {
@@ -414,6 +519,10 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 tab.add("edit");
                 tab.add("list");
             }
+            if (args[0].equalsIgnoreCase("playerdata")) {
+                tab.add("edit");
+            }
+            return tab;
         }
         if (args.length == 4) {
             if (args[0].equalsIgnoreCase("settings")) {
@@ -444,11 +553,73 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                     }
                 }
             }
+            if (args[0].equalsIgnoreCase("playerdata")) {
+                File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
+                if (!file.exists()) {
+                    return null;
+                }
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+                if (args[2].equalsIgnoreCase("edit")) {
+                    List<String> settings = yaml.getConfigurationSection("").getKeys(false).stream().toList();
+                    if (settings.size() != 0) {
+                        for (String setting : settings) {
+                            if (!setting.equalsIgnoreCase("enable")) {
+                                String world = Bukkit.getWorld(UUID.fromString(setting)).getName();
+                                tab.add(world);
+                            }
+                        }
+                    }
+                }
+            }
+            return tab;
+        }
+        if (args.length == 5 && args[0].equalsIgnoreCase("playerdata") && args[2].equalsIgnoreCase("edit")) {
+            File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
+            if (!file.exists()) {
+                return tab;
+            }
+            String worlduuid = Bukkit.getWorld(args[3]).getUID().toString();
+            List<String> settings = YamlConfiguration.loadConfiguration(file).getConfigurationSection(worlduuid).getKeys(false).stream().toList();
+            if (settings.size() != 0) {
+                for (String setting : settings) {
+                    tab.add(setting);
+                }
+            }
+            return tab;
+        }
+        if (args.length == 6 && args[0].equalsIgnoreCase("playerdata") && args[2].equalsIgnoreCase("edit")) {
+            File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
+            if (!file.exists()) {
+                return tab;
+            }
+            String worlduuid = Bukkit.getWorld(args[3]).getUID().toString();
+            List<String> settings = YamlConfiguration.loadConfiguration(file).getConfigurationSection(worlduuid).getKeys(false).stream().toList();
+            if (settings.contains(args[4])) {
+                tab.add("join");
+                tab.add("lastjoin");
+                tab.add("reset");
+            }
+            return tab;
+        }
+        if (args.length == 7 && args[0].equalsIgnoreCase("playerdata") && args[2].equalsIgnoreCase("edit")) {
+            File file = new File(plugin.getDataFolder(), "playerdata/" + Bukkit.getOfflinePlayer(args[1]).getUniqueId() + ".yml");
+            if (!file.exists()) {
+                return tab;
+            }
+            String worlduuid = Bukkit.getWorld(args[3]).getUID().toString();
+            List<String> settings = YamlConfiguration.loadConfiguration(file).getConfigurationSection(worlduuid).getKeys(false).stream().toList();
+            if (settings.contains(args[4]) && args[5].equalsIgnoreCase("join")) {
+                tab.add("<回数>");
+            }
+            if (settings.contains(args[4]) && args[5].equalsIgnoreCase("lastjoin")) {
+                tab.add("<ミリ秒>");
+            }
+            return tab;
         }
         if (args.length >= 5 && args[0].equalsIgnoreCase("settings") && args[2].equalsIgnoreCase("edit")) {
             File file = new File(plugin.getDataFolder(), "worlds/" + Bukkit.getWorld(args[1]).getUID() + ".yml");
             if (!file.exists()) {
-                return null;
+                return tab;
             }
             if (args.length == 5) {
                 tab.add("conditions");
@@ -456,12 +627,16 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 tab.add("time");
                 tab.add("limit");
                 tab.add("enable");
+                return tab;
             }
             if (args.length == 6) {
                 if (args[4].equalsIgnoreCase("conditions") || args[4].equalsIgnoreCase("actions")) {
                     tab.add("add");
                     tab.add("delete");
                     tab.add("list");
+                    if (args[4].equalsIgnoreCase("actions")) {
+                        tab.add("content");
+                    }
                 }
                 if (args[4].equalsIgnoreCase("time")) {
                     tab.add("<滞在可能時間(秒)>");
@@ -473,6 +648,7 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                     tab.add("true");
                     tab.add("false");
                 }
+                return tab;
             }
             if (args.length == 7 && args[4].equalsIgnoreCase("limit")) {
                 tab.add("<クールダウン時間(日)>");
@@ -494,10 +670,25 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
                 tab.add("message");
                 tab.add("warp");
             }
-            if (args.length == 7 && args[4].equalsIgnoreCase("actions") && args[5].equalsIgnoreCase("delete")) {
+            if (args.length == 7 && args[4].equalsIgnoreCase("actions") && (args[5].equalsIgnoreCase("delete")) || args[5].equalsIgnoreCase("content")) {
                 List<String> actions = YamlConfiguration.loadConfiguration(file).getConfigurationSection("settings." + args[3] + ".actions").getKeys(false).stream().toList();
                 for (String action : actions) {
                     tab.add(action);
+                }
+            }
+            if (args.length == 8 && args[4].equalsIgnoreCase("actions") && args[5].equalsIgnoreCase("content")) {
+                String type = YamlConfiguration.loadConfiguration(file).getString("settings." + args[3] + ".actions." + args[6] + ".type");
+                if (type.equalsIgnoreCase("command")) {
+                    tab.add("<コマンド>");
+                    tab.add("reset");
+                }
+                if (type.equalsIgnoreCase("message")) {
+                    tab.add("<メッセージ>");
+                    tab.add("reset");
+                }
+                if (type.equalsIgnoreCase("warp")) {
+                    tab.add("here");
+                    tab.add("reset");
                 }
             }
             if (args.length == 8 && args[4].equalsIgnoreCase("conditions") && args[5].equalsIgnoreCase("add")) {

@@ -8,19 +8,36 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static github.io.jpbtk.man10travelkeeper.Man10TravelKeeper.plugin;
 import static github.io.jpbtk.man10travelkeeper.Man10TravelKeeper.prefix;
 
 public class Listeners implements Listener {
     @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        File file = new File(plugin.getDataFolder(), "playerdata/" + player.getUniqueId() + ".yml");
+        if (!file.exists()) {
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+            yaml.set("enable", true);
+            try {
+                yaml.save(file);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    @EventHandler
     public void onPlayerChangeWorld(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
+        UUID world = player.getWorld().getUID();
         File file = new File(plugin.getDataFolder(), "worlds/" + player.getWorld().getUID() + ".yml");
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         if (player.isOp()) {
@@ -45,6 +62,7 @@ public class Listeners implements Listener {
                 List<String> conditions = (List<String>) yaml.getList("settings." + setting + ".conditions");
                 if (!(conditions.isEmpty())) {
                     for (String condition : conditions) {
+                        isCanEnter = true;
                         String conditionType = condition.split(":")[0];
                         if (conditionType.equals("date") || conditionType.equals("month") || conditionType.equals("a-day-of-week")) {
                             List<Integer> date = new ArrayList<>();
@@ -66,15 +84,15 @@ public class Listeners implements Listener {
                             }
                             if (!date.contains(nowdate.getDate()) && conditionType.equals("date")) {
                                 isCanEnter = false;
-                                continue;
+                                break;
                             }
                             if (!date.contains(nowdate.getMonth() + 1) && conditionType.equals("month")) {
                                 isCanEnter = false;
-                                continue;
+                                break;
                             }
                             if (!date.contains(nowdate.getDay()) && conditionType.equals("a-day-of-week")) {
                                 isCanEnter = false;
-                                continue;
+                                break;
                             }
                         }
                         if (conditionType.equals("duringtime")) {
@@ -90,10 +108,63 @@ public class Listeners implements Listener {
                             wholeendtime = endtime;
                             if (!(starttime.before(nowdate) && endtime.after(nowdate))) {
                                 isCanEnter = false;
-                                continue;
+                                break;
                             }
                         }
                         if (isCanEnter) {
+                            File playerfile = new File(plugin.getDataFolder(), "playerdata/" + player.getUniqueId() + ".yml");
+                            YamlConfiguration playeryaml = YamlConfiguration.loadConfiguration(playerfile);
+                            int joinlimit = yaml.getInt("settings." + setting + ".limit");
+                            int joincooldown = yaml.getInt("settings." + setting + ".cooldown");
+                            if (joinlimit != 0) {
+                                if (playeryaml.get(world.toString() + "." + setting + ".join") != null) {
+                                    Date lastjoin = new Date(playeryaml.getLong(world.toString() + "." + setting + ".lastjoin"));
+                                    // joincooldownは日単位
+                                    // lastjoinにjoincooldown日を足して、それがnowdateより前ならjoinlimitをリセット
+                                    lastjoin.setDate(lastjoin.getDate() + joincooldown);
+                                    if (lastjoin.before(nowdate)) {
+                                        playeryaml.set(world.toString() + "." + setting + ".join", 0);
+                                    }
+                                    try {
+                                        playeryaml.save(playerfile);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                if (playeryaml.get(world.toString() + "." + setting + ".join") != null) {
+                                    int join = playeryaml.getInt(world.toString() + "." + setting + ".join");
+                                    if (join > joinlimit) {
+                                        player.sendMessage(prefix + plugin.getConfig().getString("message.reached-join-limit"));
+                                        Location loc = yaml.getLocation("spawn");
+                                        player.teleport(loc);
+                                        playeryaml.set(world.toString() + "." + setting + ".join", 0);
+                                        try {
+                                            playeryaml.save(playerfile);
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                        }
+                                        return;
+                                    }
+                                    playeryaml.set(world.toString() + "." + setting + ".join", join + 1);
+                                    playeryaml.set(world.toString() + "." + setting + ".lastjoin", nowdate.getTime());
+                                    try {
+                                        playeryaml.save(playerfile);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                } else {
+                                    playeryaml.set(world.toString() + "." + setting + ".join", 1);
+                                    playeryaml.set(world.toString() + "." + setting + ".lastjoin", nowdate.getTime());
+                                    try {
+                                        playeryaml.save(playerfile);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                            if (!((playeryaml.get(world.toString() + ".time") == null))) {
+                                canEnterTime = playeryaml.getInt(world.toString() + ".time");
+                            }
                             List<String> actions = yaml.getConfigurationSection("settings." + setting + ".actions").getKeys(false).stream().toList();
                             for (String action : actions) {
                                 String actionType = yaml.getString("settings." + setting + ".actions." + action + ".type");
@@ -113,7 +184,13 @@ public class Listeners implements Listener {
                             break;
                         }
                     }
+                    if (!isCanEnter) {
+                        continue;
+                    }
                     canEnterTime = yaml.getInt("settings." + setting + ".time");
+                    if (isCanEnter) {
+                        break;
+                    }
                 }
             }
         }
@@ -125,6 +202,7 @@ public class Listeners implements Listener {
             player.sendMessage(prefix + plugin.getConfig().getString("message.out-of-time"));
             Location loc = yaml.getLocation("spawn");
             player.teleport(loc);
+            return;
         }
         List<OfflinePlayer> players = new ArrayList<>();
         List<Date> dates = new ArrayList<>();
@@ -159,6 +237,7 @@ public class Listeners implements Listener {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                return;
             }
             canEnterTime = (int) (canEnterTime - (nowdate.getTime() - lastdate.getTime()) / 1000);
         }
@@ -170,24 +249,36 @@ public class Listeners implements Listener {
         }
         // 指定秒後にテレポートさせるスレッド処理
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            UUID world2 = player.getWorld().getUID();
             File file2 = new File(plugin.getDataFolder(), "worlds/" + player.getWorld().getUID() + ".yml");
             YamlConfiguration yaml2 = YamlConfiguration.loadConfiguration(file2);
-            List<OfflinePlayer> players2 = new ArrayList<>();
-            if (yaml2.get("players") != null) {
-                players2 = (List<OfflinePlayer>) yaml2.getList("players");
-            }
-            if (players2.contains(player)) {
-                players2.remove(player);
-                yaml2.set("players", players2);
-                try {
-                    yaml2.save(file2);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
             player.sendMessage(prefix + plugin.getConfig().getString("message.reached-time-limit"));
             Location loc = yaml.getLocation("spawn");
             player.teleport(loc);
+            deletePlayerJoinData(file.getName().replace(".yml", ""), player);
         }, 20L * canEnterTime);
+    }
+    public void deletePlayerJoinData(String world, Player player) {
+        File file = new File(plugin.getDataFolder(), "worlds/" + world + ".yml");
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        List<OfflinePlayer> players = new ArrayList<>();
+        List<Date> dates = new ArrayList<>();
+        if (yaml.getList("players") != null) {
+            players = (List<OfflinePlayer>) yaml.getList("players");
+        }
+        if (yaml.getList("dates") != null) {
+            dates = (List<Date>) yaml.getList("dates");
+        }
+        if (players.contains(player)) {
+            dates.remove(players.indexOf(player));
+            players.remove(player);
+            yaml.set("players", players);
+            yaml.set("dates", dates);
+            try {
+                yaml.save(file);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

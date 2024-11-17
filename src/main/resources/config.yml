@@ -4,5 +4,5 @@ message:
   no-permission: "§4§lワールドに入る権限がありません"
   no-spawn: "§4§lスポーン地点が設定されていません"
   out-of-time: "§4§l現在はワールドに入場できない時間帯です"
-  # reached-limit: "§4§lワールドに入場できる回数の上限に達しました"
+  reached-join-limit: "§4§lワールドに入場できる回数の上限に達しました"
   reached-time-limit: "§4§lワールドに入場できる時間の上限に達しました"
