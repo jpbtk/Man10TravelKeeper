@@ -593,6 +593,7 @@ public class man10travelkeeper implements CommandExecutor, TabCompleter {
             if (args[4].equalsIgnoreCase("op-mode")) {
                 tab.add("true");
                 tab.add("false");
+                return tab;
             }
             String worlduuid = Bukkit.getWorld(args[3]).getUID().toString();
             List<String> settings = YamlConfiguration.loadConfiguration(file).getConfigurationSection(worlduuid).getKeys(false).stream().toList();

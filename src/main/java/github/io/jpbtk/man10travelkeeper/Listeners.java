@@ -104,7 +104,6 @@ public class Listeners implements Listener {
                         }
                         if (conditionType.equals("duringtime")) {
                             String time = condition.replace("duringtime:", "");
-                            player.sendMessage(time);
                             Date starttime = new Date(System.currentTimeMillis());
                             starttime.setHours(Integer.parseInt(time.split("-")[0].split(":")[0]));
                             starttime.setMinutes(Integer.parseInt(time.split("-")[0].split(":")[1]));
